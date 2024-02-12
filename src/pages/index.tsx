@@ -129,25 +129,16 @@ const Home = () => {
             onFinishFailed={onFinishFailed}
             layout="horizontal"
             initialValues={{
-              initialAmount: 0,
-              monthlyInterestRate: 0,
-              monthlyDeposit: 0,
-              numberOfMonths: 0,
+              initialAmount: "0",
+              monthlyInterestRate: "0,8",
+              monthlyDeposit: "50",
+              numberOfMonths: "360",
             }}
             labelCol={{ span: 6 }}
           >
             <Row gutter={[8, 0]}>
               <Col xs={24}>
-                <Form.Item
-                  label="Capital Inicial (R$)"
-                  name="initialAmount"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Capital Inicial é obrigatório",
-                    },
-                  ]}
-                >
+                <Form.Item label="Capital Inicial (R$)" name="initialAmount">
                   <Input type="text" prefix="R$" />
                 </Form.Item>
               </Col>
@@ -190,9 +181,16 @@ const Home = () => {
                 <Form.Item
                   label="Aporte Mensal (R$)"
                   name="monthlyDeposit"
-                  rules={[{ required: true, message: "Campo obrigatório" }]}
+                  required
+                  rules={[
+                    { required: true, message: "Campo obrigatório" },
+                    {
+                      min: 0.0001,
+                      message: "Rendimento mensal não pode ser zero.",
+                    },
+                  ]}
                 >
-                  <Input type="text" prefix="R$" />
+                  <Input prefix="R$" />
                 </Form.Item>
               </Col>
               <Col xs={24}>
