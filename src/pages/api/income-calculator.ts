@@ -13,43 +13,6 @@ interface RequestData {
   numberOfMonths: string;
 }
 
-// function calcularValoresPorAno(
-//   capitalInicial: number,
-//   rendimentoMensal: number,
-//   rendimentoAnual: number,
-//   aporteMensal: number,
-//   totalMeses: number
-// ): Data[] {
-//   const taxaAnual = rendimentoAnual / 100;
-//   const taxaMensal = rendimentoMensal / 100;
-
-//   let capitalAtual = capitalInicial;
-//   const valoresPorAno: Data[] = [];
-
-//   for (let mes = 1, ano = 1; mes <= totalMeses; mes++) {
-//     capitalAtual *= 1 + taxaMensal;
-//     capitalAtual += aporteMensal;
-
-//     if (mes % 12 === 0) {
-//       valoresPorAno.push({
-//         ano,
-//         capital: Number(capitalAtual.toFixed(2)),
-//         tipo: "patrimonio",
-//       });
-//       valoresPorAno.push({
-//         ano,
-//         capital: capitalInicial + aporteMensal * (mes / 12),
-//         tipo: "aportado",
-//       });
-//       ano++;
-//     }
-//   }
-
-//   console.log(valoresPorAno);
-
-//   return valoresPorAno;
-// }
-
 function calcularValoresPorAno(
   capitalInicial: number,
   rendimentoMensal: number,
@@ -84,7 +47,7 @@ function calcularValoresPorAno(
 
 export default function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data[]>
+  res: NextApiResponse<Data[] | { message: string }>
 ) {
   if (req.method === "POST") {
     const {
