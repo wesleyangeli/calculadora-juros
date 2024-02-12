@@ -1,10 +1,41 @@
 import { useState } from "react";
 import { Input, Form, Button, Card, notification, Row, Col } from "antd";
-import axios from "axios";
 import Chart from "react-google-charts";
 
+function calcularValoresPorAno(
+  capitalInicial: number,
+  rendimentoMensal: number,
+  rendimentoAnual: number,
+  aporteMensal: number,
+  totalMeses: number
+): any[] {
+  const taxaAnual = rendimentoAnual / 100;
+  const taxaMensal = rendimentoMensal / 100;
+
+  let capitalAtual = capitalInicial;
+  const valoresPorAno: any[] = [];
+
+  for (let mes = 1, ano = 1; mes <= totalMeses; mes++) {
+    capitalAtual *= 1 + taxaMensal;
+    capitalAtual += aporteMensal;
+
+    if (mes % 12 === 0) {
+      valoresPorAno.push([
+        `${ano.toString()}º ano`,
+        Number(capitalAtual.toFixed(2)),
+        capitalInicial + aporteMensal * 12 * ano,
+      ]);
+      ano++;
+    }
+  }
+
+  console.log(valoresPorAno);
+
+  return valoresPorAno;
+}
+
 const Home = () => {
-  const [data, setData] = useState<any>([]);
+  const [data, setData] = useState<any>(null);
   const [anualRate, setAnualRate] = useState("Que dá 0.0% ao ano");
 
   const onFinish = ({
@@ -14,27 +45,36 @@ const Home = () => {
     numberOfMonths,
   }: any) => {
     try {
-      const requestData = {
-        initialAmount,
-        monthlyInterestRate,
-        monthlyDeposit,
-        numberOfMonths,
-      };
+      const formatedMonthlyInterestRate = parseFloat(
+        monthlyInterestRate.replace(",", ".")
+      );
+      const toNumberInitialAmount = parseFloat(initialAmount);
+      const toNumberMonthlyInterestRate = parseFloat(
+        formatedMonthlyInterestRate.toFixed(2)
+      );
 
-      axios
-        .post("/api/income-calculator", requestData)
-        .then((response: any) => {
-          console.log("Resposta da API:", response.data);
-          const newData = [["Ano", "Patrimonio", "Aportado"], ...response.data];
-          setData(newData);
-        })
-        .catch((error) => {
-          console.error("Erro:", error);
-        });
+      const toNumberYearInterestRate = parseFloat(
+        (((1 + formatedMonthlyInterestRate / 100) ** 12 - 1) * 100).toFixed(2)
+      );
 
-      notification.info({
-        message: "teste",
-        description: `${initialAmount}, ${monthlyDeposit}, ${monthlyInterestRate}, ${numberOfMonths}`,
+      const toNumberMonthlyDeposit = parseFloat(monthlyDeposit);
+      const toNumberNumberOfMonths = parseInt(numberOfMonths);
+
+      const valoresPorAno = calcularValoresPorAno(
+        toNumberInitialAmount,
+        toNumberMonthlyInterestRate,
+        toNumberYearInterestRate,
+        toNumberMonthlyDeposit,
+        toNumberNumberOfMonths
+      );
+
+      const newData = [["Ano", "Patrimonio", "Aportado"], ...valoresPorAno];
+      setData(newData);
+
+      notification.success({
+        message: "Sucesso!",
+        style: { width: "190px" },
+        placement: "bottomLeft",
       });
     } catch (error) {
       console.log(error);
@@ -45,40 +85,49 @@ const Home = () => {
     console.log("Falha no envio do formulário:", errorInfo);
   };
 
+  const handleLegendClick = (legend: any) => {
+    const columnIndex = legend.row;
+    const newData = [...data];
+
+    for (let i = 1; i < newData.length; i++) {
+      newData[i][columnIndex] =
+        newData[i][columnIndex] === null ? data[i][columnIndex] : null;
+    }
+
+    setData(newData);
+  };
+
   const options = {
     isStacked: false,
     title: "Retorno no periodo",
+    legend: { position: "bottom", style: { padding: "20px" } },
     hAxis: {
       titleTextStyle: { color: "#333" },
       gridlines: { color: "red" },
+      format: "decimal",
     },
     vAxis: {
-      title: "Capital",
-      titleText: "teset",
       minValue: 0,
       gridlines: { color: "transparentes" },
-    }, // Adiciona linhas de grade transparentes
-    chartArea: { width: "65%", height: "70%" },
-    colors: ["#1677FF", "#F0C30B"], // Define as cores para azul e amarelo
+    },
+    chartArea: { width: "80%", height: "70%" },
+    colors: ["#1677FF", "#F0C30B"],
   };
 
   return (
     <Row
-      gutter={[20, 10]}
-      style={{ minHeight: "100vh", margin: "24px 24px" }}
+      gutter={[8, 8]}
+      style={{ minHeight: "100vh" }}
       align={"middle"}
       justify={"center"}
     >
-      <Col span={16}>
-        <Card
-          title="Calculadora de rendimentos com aportes mensais"
-          style={{ margin: "auto" }}
-        >
+      <Col xs={22} sm={22} md={22} lg={16} xl={16}>
+        <Card title="Calculadora de rendimentos com aportes mensais">
           <Form
             name="investmentForm"
             onFinish={onFinish}
             onFinishFailed={onFinishFailed}
-            layout="inline"
+            layout="horizontal"
             initialValues={{
               initialAmount: 0,
               monthlyInterestRate: 0,
@@ -87,8 +136,8 @@ const Home = () => {
             }}
             labelCol={{ span: 6 }}
           >
-            <Row gutter={[10, 8]}>
-              <Col xs={{ span: 24 }}>
+            <Row gutter={[8, 0]}>
+              <Col xs={24}>
                 <Form.Item
                   label="Capital Inicial (R$)"
                   name="initialAmount"
@@ -103,11 +152,17 @@ const Home = () => {
                 </Form.Item>
               </Col>
 
-              <Col xs={{ span: 24 }}>
+              <Col xs={24}>
                 <Form.Item
                   label="Rendimento Mensal (%)"
                   name="monthlyInterestRate"
-                  rules={[{ required: true, message: "Campo obrigatório" }]}
+                  rules={[
+                    { required: true, message: "Campo obrigatório" },
+                    {
+                      min: 0.0001,
+                      message: "Rendimento mensal não pode ser zero.",
+                    },
+                  ]}
                   extra={anualRate}
                 >
                   <Input
@@ -131,7 +186,7 @@ const Home = () => {
                 </Form.Item>
               </Col>
 
-              <Col xs={{ span: 24 }}>
+              <Col xs={24}>
                 <Form.Item
                   label="Aporte Mensal (R$)"
                   name="monthlyDeposit"
@@ -140,7 +195,7 @@ const Home = () => {
                   <Input type="text" prefix="R$" />
                 </Form.Item>
               </Col>
-              <Col xs={{ span: 24 }}>
+              <Col xs={24}>
                 <Form.Item
                   label="Total de Meses"
                   name="numberOfMonths"
@@ -163,7 +218,7 @@ const Home = () => {
         </Card>
       </Col>
 
-      <Col span={16} style={{ padding: "20px", borderRadius: "50%" }}>
+      <Col xs={22} sm={22} md={22} lg={16} xl={16}>
         {data && (
           <Card>
             <Chart
@@ -172,6 +227,21 @@ const Home = () => {
               options={options}
               width={"100%"}
               height={"400px"}
+              chartEvents={[
+                {
+                  eventName: "select",
+                  callback: ({ chartWrapper }) => {
+                    const chart = chartWrapper.getChart();
+                    const selection = chart.getSelection();
+                    if (selection.length === 1) {
+                      const legend = selection[0];
+                      if (legend.row !== null) {
+                        handleLegendClick(legend);
+                      }
+                    }
+                  },
+                },
+              ]}
             />
           </Card>
         )}
