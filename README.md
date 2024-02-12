@@ -1,4 +1,4 @@
-# Calculadora de Rendimentos com Aportes Mensais
+# Calculadora de rendimentos com aportes mensais
 
 ## Descrição
 
