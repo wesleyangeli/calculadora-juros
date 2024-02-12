@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout, Input, Form, Button, Card, notification } from "antd";
 import handler from "./api/income-calculator";
 import axios from "axios";
@@ -6,7 +6,8 @@ import axios from "axios";
 const { Sider, Content } = Layout;
 
 const Home = () => {
-  const [result, setResult] = useState(null);
+  const [form] = Form.useForm();
+  const [result, setResult] = useState({ patrimonio: [], aportado: [] });
   const [anualRate, setAnualRate] = useState("Que dá 0.0% ao ano");
 
   const onFinish = ({
@@ -15,33 +16,31 @@ const Home = () => {
     monthlyInterestRate,
     numberOfMonths,
   }: any) => {
-    const requestData = {
-      initialAmount,
-      monthlyInterestRate,
-      monthlyDeposit,
-      numberOfMonths,
-    };
+    try {
+      const requestData = {
+        initialAmount,
+        monthlyInterestRate,
+        monthlyDeposit,
+        numberOfMonths,
+      };
 
-    console.log(
-      initialAmount,
-      monthlyInterestRate,
-      monthlyDeposit,
-      numberOfMonths
-    );
+      axios
+        .post("/api/income-calculator", requestData)
+        .then((response: any) => {
+          console.log("Resposta da API:", response.data);
+          setResult(response.data);
+        })
+        .catch((error) => {
+          console.error("Erro:", error);
+        });
 
-    axios
-      .post("/api/income-calculator", requestData)
-      .then((response) => {
-        console.log("Resposta da API:", response.data);
-      })
-      .catch((error) => {
-        console.error("Erro:", error);
+      notification.info({
+        message: "teste",
+        description: `${initialAmount}, ${monthlyDeposit}, ${monthlyInterestRate}, ${numberOfMonths}`,
       });
-
-    notification.info({
-      message: "teste",
-      description: `${initialAmount}, ${monthlyDeposit}, ${monthlyInterestRate}, ${numberOfMonths}`,
-    });
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const onFinishFailed = (errorInfo: any) => {
@@ -56,6 +55,7 @@ const Home = () => {
           style={{ margin: "auto" }}
         >
           <Form
+            form={form}
             name="investmentForm"
             onFinish={onFinish}
             onFinishFailed={onFinishFailed}
@@ -126,14 +126,8 @@ const Home = () => {
       </Content>
 
       <Layout>
-        <Content style={{ padding: "20px" }}>
-          {/* Exiba aqui os resultados se necessário */}
-          {result && (
-            <div>
-              <p>Total Amount: {result.totalAmount}</p>
-              <p>Annual Returns: {result.annualReturns.join(", ")}</p>
-            </div>
-          )}
+        <Content style={{ padding: "20px", color: "black" }}>
+          {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
         </Content>
       </Layout>
     </Layout>
