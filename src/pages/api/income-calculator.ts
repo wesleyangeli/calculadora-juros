@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 interface Data {
-  patrimonio: number[];
-  aportado: number[];
-  message?: string;
+  ano: number;
+  capital: number;
+  tipo: "patrimonio" | "aportado";
 }
 
 interface RequestData {
@@ -13,48 +13,78 @@ interface RequestData {
   numberOfMonths: string;
 }
 
+// function calcularValoresPorAno(
+//   capitalInicial: number,
+//   rendimentoMensal: number,
+//   rendimentoAnual: number,
+//   aporteMensal: number,
+//   totalMeses: number
+// ): Data[] {
+//   const taxaAnual = rendimentoAnual / 100;
+//   const taxaMensal = rendimentoMensal / 100;
+
+//   let capitalAtual = capitalInicial;
+//   const valoresPorAno: Data[] = [];
+
+//   for (let mes = 1, ano = 1; mes <= totalMeses; mes++) {
+//     capitalAtual *= 1 + taxaMensal;
+//     capitalAtual += aporteMensal;
+
+//     if (mes % 12 === 0) {
+//       valoresPorAno.push({
+//         ano,
+//         capital: Number(capitalAtual.toFixed(2)),
+//         tipo: "patrimonio",
+//       });
+//       valoresPorAno.push({
+//         ano,
+//         capital: capitalInicial + aporteMensal * (mes / 12),
+//         tipo: "aportado",
+//       });
+//       ano++;
+//     }
+//   }
+
+//   console.log(valoresPorAno);
+
+//   return valoresPorAno;
+// }
+
 function calcularValoresPorAno(
   capitalInicial: number,
   rendimentoMensal: number,
   rendimentoAnual: number,
   aporteMensal: number,
   totalMeses: number
-): { patrimonio: number[]; aportado: number[] } {
+): any[] {
   const taxaAnual = rendimentoAnual / 100;
-  const taxaMensal = Math.pow(1 + taxaAnual, 1 / 12) - 1;
+  const taxaMensal = rendimentoMensal / 100;
 
   let capitalAtual = capitalInicial;
-  let anos = 0;
-  const valoresAno: number[] = [];
+  const valoresPorAno: any[] = [];
 
-  for (let mes = 1; mes <= totalMeses; mes++) {
+  for (let mes = 1, ano = 1; mes <= totalMeses; mes++) {
     capitalAtual *= 1 + taxaMensal;
     capitalAtual += aporteMensal;
 
     if (mes % 12 === 0) {
-      anos++;
-      valoresAno.push(Number(capitalAtual.toFixed(2)));
+      valoresPorAno.push([
+        `${ano.toString()}º ano`,
+        Number(capitalAtual.toFixed(2)),
+        capitalInicial + aporteMensal * 12 * ano, // Corrigindo o cálculo do capital inicial
+      ]);
+      ano++;
     }
   }
 
-  let totalAportadoAno = capitalInicial;
-  const valoresAportadosPorAno: number[] = [];
+  console.log(valoresPorAno);
 
-  for (let mes = 1; mes <= totalMeses; mes++) {
-    capitalAtual += aporteMensal;
-    totalAportadoAno += aporteMensal;
-
-    if (mes % 12 === 0) {
-      valoresAportadosPorAno.push(totalAportadoAno);
-    }
-  }
-
-  return { patrimonio: valoresAno, aportado: valoresAportadosPorAno };
+  return valoresPorAno;
 }
 
 export default function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data[]>
 ) {
   if (req.method === "POST") {
     const {
@@ -71,13 +101,15 @@ export default function handler(
     const toNumberMonthlyInterestRate = parseFloat(
       formatedMonthlyInterestRate.toFixed(2)
     );
+
     const toNumberYearInterestRate = parseFloat(
-      (formatedMonthlyInterestRate * 12).toFixed(2)
+      (((1 + formatedMonthlyInterestRate / 100) ** 12 - 1) * 100).toFixed(2)
     );
+
     const toNumberMonthlyDeposit = parseFloat(monthlyDeposit);
     const toNumberNumberOfMonths = parseInt(numberOfMonths);
 
-    console.log(
+    const valoresPorAno = calcularValoresPorAno(
       toNumberInitialAmount,
       toNumberMonthlyInterestRate,
       toNumberYearInterestRate,
@@ -85,18 +117,8 @@ export default function handler(
       toNumberNumberOfMonths
     );
 
-    const { patrimonio, aportado } = calcularValoresPorAno(
-      toNumberInitialAmount,
-      toNumberMonthlyInterestRate,
-      toNumberYearInterestRate,
-      toNumberMonthlyDeposit,
-      toNumberNumberOfMonths
-    );
-
-    res.status(200).json({ patrimonio, aportado });
+    res.status(200).json(valoresPorAno);
   } else {
-    res
-      .status(404)
-      .json({ patrimonio: [], aportado: [], message: "Não encontrado" });
+    res.status(404).json({ message: "Não encontrado" });
   }
 }
